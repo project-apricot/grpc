@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package apricot.examples.orders;
+
+option csharp_namespace = "ApricotFramework.Grpc.Examples.Contracts.Orders";
+
+service Orders {
+  rpc GetOrder(GetOrderRequest) returns (Order);
+  rpc PlaceOrder(PlaceOrderRequest) returns (Order);
+}
+
+message GetOrderRequest {
+  string id = 1;
+}
+
+message PlaceOrderRequest {
+  string customer_email = 1;
+  int32 quantity = 2;
+}
+
+message Order {
+  string id = 1;
+  string customer_email = 2;
+  int32 quantity = 3;
+}

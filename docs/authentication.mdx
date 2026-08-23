@@ -1,0 +1,68 @@
+---
+title: Authentication
+description: Presenting this service's own access token on outbound calls, and whose fault it is when one cannot be had.
+---
+
+# Authentication
+
+`ApricotFramework.Grpc.Client.Authentication` puts this service's own access token on the calls it
+makes, obtained through
+[client credentials](https://projectapricot.dev). It is about what a client *presents*, never about who
+may call this service — that is the server's business and this package has nothing to do with it.
+
+```csharp
+services.AddGrpcClient<Orders.OrdersClient>(…)
+    .AddGrpcCallCredentials(credentials =>
+    {
+        credentials.Resource = "urn:svc:orders";
+        credentials.Scopes = ["orders.read", "orders.write"];
+    });
+```
+
+Per client, because the point of a resource and a scope set is that they differ per callee. Leaving
+either null asks for this service's configured default.
+
+## The header
+
+Every call carries `Authorization: <scheme> <token>`, with the scheme the provider named rather than a
+hard-coded `Bearer`.
+
+Where something between the caller and the callee claims that header for itself — a gateway that
+authenticates the edge, a mesh that rewrites it — name another:
+
+```jsonc
+{
+  "GrpcClients": {
+    "AuthorizationHeader": "x-service-authorization"
+  }
+}
+```
+
+```csharp
+services.ConfigureGrpcCallCredentials(builder.Configuration);   // binds the section
+```
+
+That call is only needed to change the header; attaching credentials to a client does not require it.
+
+gRPC lowercases the name and accepts letters, digits, `_`, `-` and `.`. A name it would reject — or one
+ending in `-bin`, which it reserves for binary values — fails at startup rather than on the first call.
+So does a blank one, which gRPC would otherwise accept and send the token under no name at all.
+
+## Whose fault it is
+
+A token this service could not obtain is **never** reported as `not_authenticated`. The caller
+presented a perfectly good credential; it is this service that cannot present one of its own, and
+telling the caller to authenticate again is both useless and a lie about whose fault it is.
+
+| Why no token | Reported as |
+| --- | --- |
+| The provider could not be reached, or faulted | `unavailable` — waiting may help |
+| Anything else: bad client id, bad secret, bad authority, refused scope | `internal` — a person has to change something |
+
+The provider's own message is not repeated. It names the provider and can quote what it refused, and
+neither belongs in a failure a caller reads.
+
+> **Note.** This package does not depend on the error contract. It fails the call with a plain
+> `RpcException` carrying the right status code, and if
+> [error translation](client#error-translation-is-asked-for) is switched on the interceptor classifies
+> it from that — so the two are useful together and neither needs the other.

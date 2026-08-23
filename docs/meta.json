@@ -1,0 +1,5 @@
+{
+  "title": "gRPC",
+  "description": "A gRPC hop that keeps the error: the kind, code and payload a service threw are the ones its caller catches.",
+  "pages": ["index", "usage", "server", "client", "discovery", "authentication"]
+}
