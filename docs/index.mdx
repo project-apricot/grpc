@@ -1,0 +1,85 @@
+---
+title: gRPC
+description: What each package is for, what travels on the wire when a call fails, and what happens when it will not fit.
+---
+
+# gRPC
+
+gRPC gives a failed call a status code and a string. That is enough to know something went wrong and
+not enough to do anything about it: which field was invalid, which identifier was missing, whether
+retrying helps. So a service ends up inventing a failure envelope inside its response messages, and
+every caller learns a different one.
+
+This library gives the hop a contract instead. A service throws a classified error from
+[error definitions](https://projectapricot.dev); its caller catches the same error, with the same kind,
+code and payload, as though the call had been local.
+
+## Packages
+
+Everything is opt-in. Registering gRPC, registering a client, retries, load-balancing policies — those
+are gRPC's own and nothing here duplicates them.
+
+| Package | What it adds | Where |
+| --- | --- | --- |
+| `ApricotFramework.Grpc.ErrorDefinitions` | the wire contract and its conversions | anywhere, no DI |
+| `ApricotFramework.Grpc.Server` | a failed call answers with classified errors | ASP.NET Core |
+| `ApricotFramework.Grpc.Client` | how clients behave: deadlines, transport, one place to reach them | anywhere |
+| `ApricotFramework.Grpc.Client.DiscoveryClient` | where clients point | anywhere |
+| `ApricotFramework.Grpc.Client.Authentication` | what clients present | anywhere |
+
+Only the server needs ASP.NET Core. A console or worker service can call gRPC with the client packages
+and nothing else — they carry no framework reference, so they do not drag the ASP.NET runtime into an
+image that would otherwise not need it.
+
+## The status code is the kind
+
+The sixteen error kinds *are* the sixteen non-OK `google.rpc.Code` values, so the status code and the
+kind are the same fact written twice. `ErrorKindStatus` does the translation, and it is the same table
+that maps a kind to an HTTP status — one table, so a service cannot classify a failure one way over
+HTTP and another over gRPC.
+
+## What travels
+
+The errors themselves go in `google.rpc.Status.details`, as one `Any`-packed
+`apricot.errors.v1.ErrorDetails`:
+
+```proto
+message ErrorDetails {
+  repeated ErrorDetail errors = 1;
+  bool truncated = 2;
+}
+
+message ErrorDetail {
+  string kind = 1;                     // "not_found"
+  string code = 2;                     // "ORDER_NOT_FOUND"
+  string message = 3;
+  google.protobuf.Struct payload = 4;
+}
+```
+
+The status code and message describe the first error; the rest are there for a caller that wants them.
+Payloads are a `Struct` rather than a JSON string, so a tool reading the trailer sees values rather than
+an opaque blob — and so a service in another language can implement the contract by compiling
+`protos/apricot/errors/v1/errors.proto`, which ships inside the contract package.
+
+> **Warning.** This is a wire contract. Every field number and the message name in the type URL
+> `type.googleapis.com/apricot.errors.v1.ErrorDetails` are frozen, and pinned by golden tests whose
+> expected bytes were encoded by hand from the protobuf specification.
+
+## When it will not fit
+
+Details travel in a trailer, and a trailer larger than the peer's header list fails the whole response
+as a protocol error — turning a clean `not_found` into a transport failure nobody can classify. So the
+errors are trimmed to a byte budget rather than sent whole:
+
+1. the payloads go first, since a caller can act on a kind and a code without them;
+2. then the errors after the first;
+3. then, only if one error alone will not fit, the first error's message.
+
+Whatever is dropped, `truncated` is set, and the server's log holds the full set either way.
+
+## Reading what a peer sends
+
+Nothing about reading a failure throws. A peer that is not an apricot service, one whose details cannot
+be parsed, or a proxy answering `unavailable` with no body at all — each yields an error classified from
+the status code, so a caller has one thing to catch and one thing to switch on.

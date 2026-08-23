@@ -1,0 +1,112 @@
+---
+title: Client
+description: How clients behave — deadlines, transport strictness, error translation — and what lifetime to give them.
+---
+
+# Client
+
+`ApricotFramework.Grpc.Client` is about how a client behaves, never where it points or what it presents.
+Those are [discovery](discovery) and [authentication](authentication), added separately.
+
+```csharp
+services.AddGrpcClientsCore(builder.Configuration);   // or AddGrpcClientsCore(Action<GrpcClientsOptions>)
+services.AddGrpcClient<Orders.OrdersClient>(o => o.Address = new Uri("https://orders:5001"));
+```
+
+It carries no ASP.NET framework reference, so a console or worker host can use it without pulling the
+ASP.NET runtime into its image.
+
+## Error translation is asked for
+
+A client translates nothing until a host says so. Two ways, depending on how wide you want it:
+
+```csharp
+services.AddGrpcErrorMapping();                     // every gRPC client in the container
+services.AddGrpcClient<T>(…).AddGrpcErrorMapping(); // this one
+```
+
+The container-wide form covers clients this library never registered, including third-party ones —
+which is usually what you want and occasionally not, hence the other. Doing both is harmless: the
+second interceptor sees an `ErrorDefinitionException` rather than an `RpcException` and passes it on.
+
+## Settings
+
+Bound from the `GrpcClients` section. Each package that reads this section binds its own type out of
+it, so a setting belongs to whichever package acts on it.
+
+Name another section if that one is taken — but name the same one to every package that reads it:
+
+```csharp
+services.AddGrpcClientsCore(configuration, "Downstream:Grpc");
+services.ConfigureGrpcCallCredentials(configuration, "Downstream:Grpc");
+```
+
+```jsonc
+{
+  "GrpcClients": {
+    "DefaultDeadline": "00:00:10",
+    // Only meaningful where the peer cannot be verified. See below.
+    "AllowInsecure": true
+  }
+}
+```
+
+| Setting | Effect |
+| --- | --- |
+| `DefaultDeadline` | Applied to a unary call that sets no deadline of its own. Null leaves calls without one. |
+| `AllowInsecure` | Lets a client talk to a peer it cannot verify — see below. Warns once at startup. |
+
+A deadline applies to unary calls only: a streaming call is often meant to stay open. A call that runs
+out of time fails as `timeout`, like any other classified error. gRPC has no service-config timeout of
+its own, which is why this exists.
+
+Retries do not: `ServiceConfig.RetryPolicy` is gRPC's own and nothing here duplicates it.
+
+## Talking to a peer you cannot verify
+
+`AllowInsecure` does two things, both for a peer this service cannot verify:
+
+- call credentials are allowed onto a **plaintext** channel, which gRPC otherwise refuses;
+- a **TLS certificate is accepted without being checked**, so a self-signed one works.
+
+That covers what a laptop, a compose file, or a mesh terminating TLS at the sidecar needs, and it is a
+fact about the deployment rather than about the code — which is why it is configuration.
+
+It is applied **per client**, by asking:
+
+```csharp
+services.AddGrpcClient<T>(…).AllowInsecureTransportIfConfigured();
+```
+
+`AddDiscoveredGrpcClient` asks for you. The call does nothing unless the setting is on, so it costs
+nothing in an environment that does not need it.
+
+> **Warning.** This removes the protection that makes a token safe to send: anything on the path can
+> read it and answer in the peer's place. Leaving it on is warned about once, at startup — a warning on
+> every call is one nobody reads.
+
+Per client rather than container-wide because relaxing certificate validation happens on the
+`HttpClient` handler, where a gRPC client is indistinguishable from any other named client. Doing it
+globally would quietly stop verifying **every** outbound call the service makes.
+
+## Reaching a client
+
+Inject the generated client type, or `IGrpcClientProvider` where one dependency reads better than one
+per callee:
+
+```csharp
+var orders = clients.Create<Orders.OrdersClient>();
+```
+
+It is a convenience over `GrpcClientFactory.CreateClient<T>()`, not something you need.
+
+## Lifetimes
+
+**Inject generated clients into singletons freely.** The registrations suggest otherwise — the client
+and the factory are both transient — but what matters is underneath: every resolution of a client wraps
+the *same* `GrpcChannel`, cached for the process. Holding one forever is what a channel is for; it
+multiplexes every call over one HTTP/2 connection, and building one per request would be the bug.
+
+The one exception is an interceptor registered with `InterceptorScope.Client` that depends on scoped
+services. A client captured in a singleton would freeze the scope it was built in. Both interceptors
+this library attaches are `Channel` scope and hold nothing, so neither creates that hazard.

@@ -1,0 +1,119 @@
+---
+title: Usage
+description: The round trip end to end, and how the pieces are put together in a host.
+---
+
+# Usage
+
+## Composing it
+
+Each package registers what it owns and nothing else, so a host takes the parts it wants. There is no
+package that wires the others together — your own composition root is the right place for that, which
+is why the library exposes `AddGrpcClientsCore` and leaves `AddGrpcClients` free for you:
+
+```csharp
+// YourService/Configuration/GrpcClientExtensions.cs
+public static IServiceCollection AddGrpcClients(this IServiceCollection services, IConfiguration configuration)
+{
+    services.AddGrpcClientsCore(configuration);   // deadlines, transport, one place to reach clients
+    services.AddGrpcErrorMapping();               // failures arrive as the exception the callee threw
+    services.ConfigureGrpcCallCredentials(configuration);
+
+    return services
+        .AddDiscoveredGrpcClient<Orders.OrdersClient>("orders")
+        .AddGrpcCallCredentials(credentials => credentials.Scopes = ["orders.read"])
+        .Services;
+}
+```
+
+```csharp
+// Program.cs
+builder.Services.AddGrpc();                 // gRPC's own
+builder.Services.AddGrpcErrorHandling();    // ours
+builder.Services.AddGrpcClients(builder.Configuration);
+```
+
+Drop any line and the rest still works: a client with no credentials, a server that reports failures
+its own way, a caller that reads `RpcException` itself.
+
+## Throwing
+
+A service method throws whatever classified error describes the failure. Nothing catches it; the
+interceptor turns it into the answer.
+
+```csharp
+throw Err.NotFound("ORDER_NOT_FOUND", $"no order with id '{id}'",
+    new Dictionary<string, object?> { ["orderId"] = id }).AsException();
+```
+
+Several at once, for a request that is wrong in more than one way:
+
+```csharp
+var errors = new ErrorCollector();
+
+errors.AddIf(!email.Contains('@'), Err.Validation("EMAIL_INVALID", "not an address",
+    new Dictionary<string, object?> { ["field"] = "customer_email" }));
+errors.AddIf(quantity <= 0, Err.Validation("QUANTITY_TOO_LOW", "at least one item is needed"));
+
+errors.ThrowIfAny();
+```
+
+The first error sets the status code, so put the one that describes the failure best first.
+
+## Catching
+
+```csharp
+try
+{
+    var order = await client.GetOrderAsync(new GetOrderRequest { Id = id });
+}
+catch (ErrorDefinitionException failure) when (failure.HasKind(ErrorKinds.NotFound))
+{
+    return null;
+}
+```
+
+`failure.Errors` holds every error the callee sent, in its order. The original `RpcException` is the
+inner exception, so the status code and the trailers are still reachable.
+
+Payload values arrive as `JsonElement`, the same as they do when a caller reads another service's
+problem document over HTTP — a reader cannot know what a value was meant to be.
+
+## Both transports at once
+
+A service that answers HTTP as well needs no second set of mappings. `AddGrpcErrorHandling` registers
+the error-definitions pipeline, so a mapping written once is honoured by both:
+
+```csharp
+builder.Services.AddGrpcErrorHandling();
+builder.Services.MapExceptionToError<TenantMissingException>(ErrorKinds.NotFound);
+
+app.UseExceptionHandler();   // the HTTP half
+```
+
+The same `TenantMissingException` is then a 404 problem document to an HTTP caller and a `not_found`
+error to a gRPC one.
+
+And in the other direction: a caller whose own HTTP pipeline uses the error definitions handler needs no
+translation layer at all. An error that came back over gRPC leaves as RFC 9457 problem+json, kind, code
+and payload intact, because it is an `ErrorDefinitionException` like any other.
+
+## What a caller cannot be told
+
+An exception no mapper recognises is answered as `internal` with an empty message. Exception text
+routinely holds connection strings, SQL and identifiers, and a failure nobody classified is by
+definition one nobody checked for those. The real exception goes to the log at error level, which is
+the only record of it.
+
+## A callee that is not an apricot service
+
+Every failure is still classified, from the status code alone:
+
+| What arrives | What is caught |
+| --- | --- |
+| `NOT_FOUND` with no details | `not_found`, code `NOT_FOUND`, the status message |
+| `UNAVAILABLE` from a proxy | `unavailable`, code `UNAVAILABLE` |
+| Details this library cannot read | classified from the status code, details ignored |
+| A kind no validator would accept | read as sent, rather than rejected |
+
+So one `catch (ErrorDefinitionException)` covers every callee, whatever it is written in.

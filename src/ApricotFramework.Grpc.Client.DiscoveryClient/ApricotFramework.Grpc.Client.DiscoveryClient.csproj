@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Addresses gRPC clients by logical service name, resolving them through ApricotFramework.DiscoveryClient so a caller names the service it wants rather than a host and port.</Description>
+    <PackageTags>grpc;client;service-discovery;microservices;dependencyinjection</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ApricotFramework.DiscoveryClient" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ApricotFramework.Grpc.Client/ApricotFramework.Grpc.Client.csproj" />
+  </ItemGroup>
+
+</Project>

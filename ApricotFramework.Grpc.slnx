@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ApricotFramework.Grpc.ErrorDefinitions/ApricotFramework.Grpc.ErrorDefinitions.csproj" />
+    <Project Path="src/ApricotFramework.Grpc.Server/ApricotFramework.Grpc.Server.csproj" />
+    <Project Path="src/ApricotFramework.Grpc.Client/ApricotFramework.Grpc.Client.csproj" />
+    <Project Path="src/ApricotFramework.Grpc.Client.DiscoveryClient/ApricotFramework.Grpc.Client.DiscoveryClient.csproj" />
+    <Project Path="src/ApricotFramework.Grpc.Client.Authentication/ApricotFramework.Grpc.Client.Authentication.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="tests\.editorconfig" />
+    <Project Path="tests/ApricotFramework.Grpc.ErrorDefinitions.Tests/ApricotFramework.Grpc.ErrorDefinitions.Tests.csproj" />
+    <Project Path="tests/ApricotFramework.Grpc.Server.Tests/ApricotFramework.Grpc.Server.Tests.csproj" />
+    <Project Path="tests/ApricotFramework.Grpc.Client.Tests/ApricotFramework.Grpc.Client.Tests.csproj" />
+    <Project Path="tests/ApricotFramework.Grpc.Client.DiscoveryClient.Tests/ApricotFramework.Grpc.Client.DiscoveryClient.Tests.csproj" />
+    <Project Path="tests/ApricotFramework.Grpc.Client.Authentication.Tests/ApricotFramework.Grpc.Client.Authentication.Tests.csproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/ApricotFramework.Grpc.Examples.Contracts/ApricotFramework.Grpc.Examples.Contracts.csproj" />
+    <Project Path="examples/ApricotFramework.Grpc.Examples.Server/ApricotFramework.Grpc.Examples.Server.csproj" />
+    <Project Path="examples/ApricotFramework.Grpc.Examples.Client/ApricotFramework.Grpc.Examples.Client.csproj" />
+  </Folder>
+</Solution>

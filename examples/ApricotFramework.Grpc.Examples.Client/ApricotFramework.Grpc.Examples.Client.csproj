@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ApricotFramework.DiscoveryClient.AspNetCore" />
+    <PackageReference Include="ApricotFramework.ErrorDefinitions.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/ApricotFramework.Grpc.Client.Authentication/ApricotFramework.Grpc.Client.Authentication.csproj" />
+    <ProjectReference Include="../../src/ApricotFramework.Grpc.Client.DiscoveryClient/ApricotFramework.Grpc.Client.DiscoveryClient.csproj" />
+    <ProjectReference Include="../ApricotFramework.Grpc.Examples.Contracts/ApricotFramework.Grpc.Examples.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

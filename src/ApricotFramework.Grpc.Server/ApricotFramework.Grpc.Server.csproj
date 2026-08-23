@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Answers a failed gRPC call with classified errors, asking the same exception mappers that already answer this service's HTTP requests, so a failure means the same thing whichever way a caller reached it.</Description>
+    <PackageTags>grpc;server;aspnetcore;error-handling;interceptors;microservices</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ApricotFramework.ErrorDefinitions.AspNetCore" />
+
+    <!-- The server alone, not the Grpc.AspNetCore metapackage: that also carries the protoc toolchain,
+         the client factory and Google.Protobuf, none of which a server-side interceptor needs. -->
+    <PackageReference Include="Grpc.AspNetCore.Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ApricotFramework.Grpc.ErrorDefinitions/ApricotFramework.Grpc.ErrorDefinitions.csproj" />
+  </ItemGroup>
+
+</Project>

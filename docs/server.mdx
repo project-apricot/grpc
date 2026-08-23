@@ -1,0 +1,81 @@
+---
+title: Server
+description: What AddGrpcErrorHandling registers, how a failure is classified, and the size budget.
+---
+
+# Server
+
+`ApricotFramework.Grpc.Server` is one thing: a failed call answers with classified errors.
+
+```csharp
+builder.Services.AddGrpc();                 // gRPC's own registration
+builder.Services.AddGrpcErrorHandling();    // ours
+
+app.MapGrpcService<OrdersService>();
+```
+
+There is deliberately no `AddGrpcServer` here. Registering gRPC, mapping services and exposing
+reflection are gRPC's own APIs and this library has nothing to add to them — so it does not stand in
+front of them, and it leaves the name free for you:
+
+```csharp
+// YourService/Configuration/GrpcServerExtensions.cs
+public static IServiceCollection AddGrpcServer(this IServiceCollection services)
+{
+    services.AddGrpc();
+    services.AddGrpcReflection();      // your call: this exposes the schema
+    services.AddGrpcErrorHandling();
+
+    return services;
+}
+```
+
+Whether your schema is reachable is a decision about your service, not one a library should make for
+you — which is the main reason the three are not bundled.
+
+## Order does not matter
+
+The interceptor is attached through `GrpcServiceOptions`, not by wrapping `AddGrpc`, so it makes no
+difference which is called first. Calling `AddGrpcErrorHandling` twice intercepts once.
+
+## How a failure is classified
+
+The interceptor covers all four call shapes. On an exception it asks each registered
+`IExceptionErrorMapper` in registration order, passing the request's `HttpContext`, and the first
+non-empty answer wins:
+
+- `ErrorDefinitionExceptionMapper`, always first, answers with the errors an `ErrorDefinitionException`
+  already carries — so throwing `Err.*(...).AsException()` needs no configuration;
+- `CancellationExceptionMapper` separates the caller going away (`cancelled`) from something this
+  service waited on running out of time (`timeout`);
+- anything registered with `MapExceptionToError<T>()` or a mapper of your own.
+
+These are the same mappers that answer this service's HTTP requests. That is the point: a service says
+what its exceptions mean once. `AddGrpcErrorHandling` calls `AddErrorDefinitions` for you, which is
+idempotent, so a host that already registered it is unaffected.
+
+> **Note.** An `RpcException` thrown by a service method is left exactly as thrown. A method that has
+> decided on a status code has said so, and second-guessing it would be worse than useless.
+
+## The size budget
+
+`GrpcErrorOptions.MaxDetailsBytes` bounds the encoded `google.rpc.Status`, and defaults to 4 KB —
+chosen against the 8 KB header list peers commonly allow, leaving room for the other trailers and for
+the third that base64 adds:
+
+```csharp
+builder.Services.AddGrpcErrorHandling(options => options.MaxDetailsBytes = 8192);
+```
+
+Zero or less sends the status code and message alone. The message is capped at
+`GrpcErrorOptions.MaxMessageBytes` and never takes more than half the budget, so a long message cannot
+crowd out the errors it summarises.
+
+Deliberately not bound from configuration: what a service answers when it fails is part of its
+contract, and a contract an environment variable can change is not one.
+
+## Logging
+
+The interceptor is the only thing that sees the exception, so it is the only thing that can record it.
+A classified failure is logged at debug — a service doing its job. An unrecognised one is logged at
+error, with the exception, because nothing else will.

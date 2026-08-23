@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package apricot.errors.v1;
+
+import "google/protobuf/struct.proto";
+
+option csharp_namespace = "ApricotFramework.Grpc.ErrorDefinitions.Contract";
+
+// What a service failed with, packed into google.rpc.Status.details.
+message ErrorDetails {
+  // The errors, most significant first. The status code and message describe the first.
+  repeated ErrorDetail errors = 1;
+
+  // Set when payloads or errors were dropped to keep the trailer within its size budget.
+  bool truncated = 2;
+}
+
+// One classified error.
+message ErrorDetail {
+  // The classification, one of the sixteen non-OK google.rpc.Code names in lower_snake_case.
+  string kind = 1;
+
+  // The specific reason within the kind, in UPPER_SNAKE_CASE.
+  string code = 2;
+
+  // What went wrong, for a human reading a log.
+  string message = 3;
+
+  // What the caller needs to act on it: which field, which limit, which identifier.
+  google.protobuf.Struct payload = 4;
+}

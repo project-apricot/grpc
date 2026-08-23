@@ -1,0 +1,63 @@
+---
+title: Discovery
+description: Addressing a gRPC client by service name instead of by host and port.
+---
+
+# Discovery
+
+`ApricotFramework.Grpc.Client.DiscoveryClient` lets a client name the service it wants, resolving it
+through the [discovery catalogue](https://projectapricot.dev).
+
+```csharp
+services.AddDiscoveredGrpcClient<Orders.OrdersClient>("orders");
+```
+
+That is the whole surface. It returns the ordinary `IHttpClientBuilder`, so credentials, interceptors
+and channel configuration are added to it the usual way:
+
+```csharp
+services
+    .AddDiscoveredGrpcClient<Orders.OrdersClient>("orders")
+    .AddGrpcCallCredentials(credentials => credentials.Scopes = ["orders.read"]);
+```
+
+## When the catalogue is asked
+
+Once, when the channel is created. The address is fixed from then on — which is what a gRPC channel
+wants, since it keeps one long-lived HTTP/2 connection rather than reconnecting per call.
+
+> **Note.** That resolution blocks the thread building the channel. A catalogue read from configuration
+> answers without waiting, so in practice nothing is blocked; one that reached the network would be.
+
+The helper also asks for [insecure transport](client#talking-to-a-peer-you-cannot-verify) on your
+behalf, which does nothing unless the setting is on.
+
+## Which protocol is used
+
+Whichever the catalogue is configured for. `StaticDiscovery:DefaultGrpcProtocol` chooses both the
+scheme and, through it, the port — a service declaring separate `http` and `https` gRPC ports is
+resolved to one or the other by that setting, not by anything a caller says here.
+
+```jsonc
+{
+  "StaticDiscovery": {
+    "DefaultGrpcProtocol": "https"
+  }
+}
+```
+
+So a client cannot ask for TLS independently of the catalogue, and should not try to: the port it would
+reach is chosen by the same setting.
+
+## When the catalogue cannot answer
+
+Both failures say which service and why, when the channel is built, rather than surfacing a long way
+from the cause:
+
+| Situation | What happens |
+| --- | --- |
+| The catalogue does not know the service | `InvalidOperationException` naming it |
+| The address is not an http or https URL | `InvalidOperationException` naming the value |
+
+A bare `host:port` counts as not a URL. It parses as an absolute URI whose *scheme* is the host, which
+is exactly the sort of thing that otherwise fails obscurely inside the channel.
