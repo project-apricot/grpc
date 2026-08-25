@@ -1,7 +1,3 @@
-# Standalone docs sync: mirror this repository's docs/ into the documentation site without
-# cutting a release. Use it when only the docs changed.
-#
-# A release syncs its own docs — see the `docs` job in release.yml.
 name: Docs
 
 on:
@@ -29,4 +25,6 @@ jobs:
     with:
       ref: ${{ inputs.ref }}
       dry_run: ${{ inputs.dry_run }}
-    secrets: inherit
+    secrets:
+      docs_app_client_id: ${{ secrets.DOCS_APP_CLIENT_ID }}
+      docs_app_private_key: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
