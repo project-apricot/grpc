@@ -64,5 +64,5 @@ neither belongs in a failure a caller reads.
 
 > **Note.** This package does not depend on the error contract. It fails the call with a plain
 > `RpcException` carrying the right status code, and if
-> [error translation](client#error-translation-is-asked-for) is switched on the interceptor classifies
+> [error translation](./client.mdx#error-translation-is-asked-for) is switched on the interceptor classifies
 > it from that — so the two are useful together and neither needs the other.

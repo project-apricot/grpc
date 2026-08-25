@@ -29,7 +29,7 @@ wants, since it keeps one long-lived HTTP/2 connection rather than reconnecting 
 > **Note.** That resolution blocks the thread building the channel. A catalogue read from configuration
 > answers without waiting, so in practice nothing is blocked; one that reached the network would be.
 
-The helper also asks for [insecure transport](client#talking-to-a-peer-you-cannot-verify) on your
+The helper also asks for [insecure transport](./client.mdx#talking-to-a-peer-you-cannot-verify) on your
 behalf, which does nothing unless the setting is on.
 
 ## Which protocol is used
