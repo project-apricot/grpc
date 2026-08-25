@@ -62,3 +62,16 @@ jobs:
         with:
           tag: ${{ github.event.release.tag_name || inputs.tag || needs.prepare.outputs.tag }}
           nuget_user: ${{ secrets.NUGET_USER }}
+
+  # Only after the packages are actually on nuget.org: docs that describe a release that
+  # failed to publish are worse than docs that lag by a few minutes.
+  docs:
+    needs: [publish]
+    if: ${{ success() }}
+    uses: project-apricot/shared-workflows/.github/workflows/docs-release.yml@v1
+    permissions:
+      contents: read
+    with:
+      ref: ${{ github.event.release.tag_name || inputs.tag || needs.prepare.outputs.tag }}
+      version: ${{ github.event.release.tag_name || inputs.tag || needs.prepare.outputs.tag }}
+    secrets: inherit

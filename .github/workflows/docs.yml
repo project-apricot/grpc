@@ -1,0 +1,32 @@
+# Standalone docs sync: mirror this repository's docs/ into the documentation site without
+# cutting a release. Use it when only the docs changed.
+#
+# A release syncs its own docs — see the `docs` job in release.yml.
+name: Docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Ref to take the docs from. Empty = the branch this run was started on.'
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: 'Report the diff without opening a pull request.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    uses: project-apricot/shared-workflows/.github/workflows/docs-release.yml@v1
+    permissions:
+      contents: read
+    with:
+      ref: ${{ inputs.ref }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
