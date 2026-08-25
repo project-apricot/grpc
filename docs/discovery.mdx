@@ -6,7 +6,7 @@ description: Addressing a gRPC client by service name instead of by host and por
 # Discovery
 
 `ApricotFramework.Grpc.Client.DiscoveryClient` lets a client name the service it wants, resolving it
-through the [discovery catalogue](https://projectapricot.dev).
+through the [discovery catalogue](https://projectapricot.dev/docs/discovery-client).
 
 ```csharp
 services.AddDiscoveredGrpcClient<Orders.OrdersClient>("orders");

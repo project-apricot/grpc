@@ -66,4 +66,4 @@ catch (ErrorDefinitionException failure) when (failure.HasKind(ErrorKinds.NotFou
 The wire contract is `apricot.errors.v1`, packed into the contract package as
 `protos/apricot/errors/v1/errors.proto` so a service in another language can speak it.
 
-Full documentation at [projectapricot.dev](https://projectapricot.dev).
+Full documentation at [projectapricot.dev/docs/grpc](https://projectapricot.dev/docs/grpc).

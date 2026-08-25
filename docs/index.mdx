@@ -11,7 +11,7 @@ retrying helps. So a service ends up inventing a failure envelope inside its res
 every caller learns a different one.
 
 This library gives the hop a contract instead. A service throws a classified error from
-[error definitions](https://projectapricot.dev); its caller catches the same error, with the same kind,
+[error definitions](https://projectapricot.dev/docs/error-definitions); its caller catches the same error, with the same kind,
 code and payload, as though the call had been local.
 
 ## Packages
