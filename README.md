@@ -20,7 +20,7 @@ what it needs and nothing else. Only the server package requires ASP.NET Core.
 dotnet add package ApricotFramework.Grpc.Server                    # the server
 dotnet add package ApricotFramework.Grpc.Client                    # the caller
 dotnet add package ApricotFramework.Grpc.Client.DiscoveryClient    # ...addressed by service name
-dotnet add package ApricotFramework.Grpc.Client.Authentication     # ...presenting its own token
+dotnet add package ApricotFramework.Grpc.Client.Authentication     # ...presenting a token
 ```
 
 ## Usage

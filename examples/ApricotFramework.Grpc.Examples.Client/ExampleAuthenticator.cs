@@ -1,3 +1,4 @@
+using ApricotFramework.Authentication.ClientCredentials;
 using ApricotFramework.Authentication;
 
 namespace ApricotFramework.Grpc.Examples.Client;
@@ -10,20 +11,20 @@ namespace ApricotFramework.Grpc.Examples.Client;
 /// <c>ApricotFramework.Authentication.AspNetCore</c> and gets tokens from its identity provider. This
 /// hands out a fixed string so the example runs with nothing else installed.
 /// </remarks>
-public sealed class ExampleAuthenticator : IClientAuthenticator
+public sealed class ExampleAuthenticator : IClientCredentialsAuthenticator
 {
     /// <inheritdoc />
-    public Task<AuthenticatedClientContext> AuthenticateAsync(
-        ClientAuthenticationParameters? parameters = null,
+    public Task<AccessToken> AuthenticateAsync(
+        TokenRequestParameters? parameters = null,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new AuthenticatedClientContext { Token = "example-token" });
+        return Task.FromResult(new AccessToken { Value = "example-token" });
     }
 
     /// <inheritdoc />
     public async Task<T> DoAuthenticatedAsync<T>(
-        Func<AuthenticatedClientContext, CancellationToken, Task<T>> securedOperation,
-        ClientAuthenticationParameters? parameters = null,
+        Func<AccessToken, CancellationToken, Task<T>> securedOperation,
+        TokenRequestParameters? parameters = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(securedOperation);

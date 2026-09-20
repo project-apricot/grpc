@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Presents this service's own access token on outbound gRPC calls, obtained through ApricotFramework.Authentication, and reports a failure to obtain one as a fault of this service rather than of whoever called it.</Description>
-    <PackageTags>grpc;client;authentication;oauth2;client-credentials;microservices</PackageTags>
+    <Description>Presents an access token on outbound gRPC calls, obtained through ApricotFramework.Authentication as either this service or the party it is serving, and reports a failure to obtain one as a fault of this service rather than of whoever called it.</Description>
+    <PackageTags>grpc;client;authentication;oauth2;client-credentials;token-exchange;microservices</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ApricotFramework.Authentication" />
+    <PackageReference Include="ApricotFramework.Authentication.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

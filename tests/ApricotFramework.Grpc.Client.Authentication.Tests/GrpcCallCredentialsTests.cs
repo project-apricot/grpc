@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using ApricotFramework.Authentication.ClientCredentials;
 using ApricotFramework.Authentication;
 using ApricotFramework.Grpc.Client.Authentication.Extensions;
 using ApricotFramework.Grpc.Client.Authentication.Options;
@@ -60,8 +61,8 @@ public class GrpcCallCredentialsTests
     [Fact]
     public async Task AddGrpcCallCredentials_TokenProviderDown_SaysWaitingMayHelp()
     {
-        var thrown = await Failing(new ClientAuthenticationException(
-            ClientAuthenticationFailure.Unavailable,
+        var thrown = await Failing(new TokenRequestException(
+            TokenRequestFailure.Unavailable,
             "the provider at https://login.example.com refused: client_secret is wrong"));
 
         Assert.Equal(StatusCode.Unavailable, thrown.StatusCode);
@@ -71,8 +72,8 @@ public class GrpcCallCredentialsTests
     [Fact]
     public async Task AddGrpcCallCredentials_TokenMisconfigured_BlamesThisServiceAsInternal()
     {
-        var thrown = await Failing(new ClientAuthenticationException(
-            ClientAuthenticationFailure.InvalidCredentials,
+        var thrown = await Failing(new TokenRequestException(
+            TokenRequestFailure.InvalidCredentials,
             "the provider rejected the client identifier"));
 
         // Never Unauthenticated: the caller's own credential was fine, ours is not.
@@ -105,7 +106,7 @@ public class GrpcCallCredentialsTests
     /// </summary>
     /// <param name="failure">How the authenticator fails.</param>
     /// <returns>The exception the call fails with.</returns>
-    private static async Task<RpcException> Failing(ClientAuthenticationException failure)
+    private static async Task<RpcException> Failing(TokenRequestException failure)
     {
         return await Assert.ThrowsAsync<RpcException>(
             async () => await Client(new StubAuthenticator(failure)).Call());
@@ -120,7 +121,7 @@ public class GrpcCallCredentialsTests
     /// <param name="handler">The transport to use, or null for the real one.</param>
     /// <returns>The client.</returns>
     private static StubClient Client(
-        IClientAuthenticator authenticator,
+        IClientCredentialsAuthenticator authenticator,
         Action<GrpcCredentialsOptions>? configureShared = null,
         IConfiguration? configuration = null,
         HttpMessageHandler? handler = null)

@@ -1,9 +1,9 @@
-using ApricotFramework.Authentication;
+using ApricotFramework.Authentication.ClientCredentials;
 using ApricotFramework.DiscoveryClient.AspNetCore.Extensions;
 using ApricotFramework.DiscoveryClient.Impl;
 using ApricotFramework.DiscoveryClient.Model;
-using ApricotFramework.ErrorDefinitions;
 using ApricotFramework.ErrorDefinitions.AspNetCore.Extensions;
+using ApricotFramework.ErrorDefinitions;
 using ApricotFramework.Grpc.Client;
 using ApricotFramework.Grpc.Examples.Client;
 using ApricotFramework.Grpc.Examples.Contracts.Orders;
@@ -23,7 +23,7 @@ builder.Services.AddServiceDefinitionsSource(new StaticServiceDefinitionsSource(
 }));
 
 builder.Services.AddDiscoveryClient(builder.Configuration);
-builder.Services.AddSingleton<IClientAuthenticator, ExampleAuthenticator>();
+builder.Services.AddSingleton<IClientCredentialsAuthenticator, ExampleAuthenticator>();
 
 // Turns whatever this service fails with into RFC 9457 problem+json — including an error that came
 // back over gRPC, which arrives as an ErrorDefinitionException like any other classified failure.

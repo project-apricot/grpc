@@ -1,14 +1,14 @@
 ---
 title: Authentication
-description: Presenting this service's own access token on outbound calls, and whose fault it is when one cannot be had.
+description: Presenting an access token on outbound calls as this service or as the person it is serving, and whose fault it is when one cannot be had.
 ---
 
 # Authentication
 
-`ApricotFramework.Grpc.Client.Authentication` puts this service's own access token on the calls it
-makes, obtained through
-[client credentials](https://projectapricot.dev/docs/authentication). It is about what a client *presents*, never about who
-may call this service — that is the server's business and this package has nothing to do with it.
+`ApricotFramework.Grpc.Client.Authentication` puts an access token on the calls this service makes,
+obtained through [ApricotFramework.Authentication](https://projectapricot.dev/docs/authentication). It
+is about what a client *presents*, never about who may call this service — that is the server's business
+and this package has nothing to do with it.
 
 ```csharp
 services.AddGrpcClient<Orders.OrdersClient>(…)
@@ -21,6 +21,36 @@ services.AddGrpcClient<Orders.OrdersClient>(…)
 
 Per client, because the point of a resource and a scope set is that they differ per callee. Leaving
 either null asks for this service's configured default.
+
+## Whose token
+
+`AddGrpcCallCredentials` presents **this service's own** token, from the client credentials grant. It is
+the right one wherever the callee is answering this service rather than a person — a background job, a
+cache warm, anything with nobody waiting on it.
+
+`AddGrpcExchangedCallCredentials` presents a token obtained **on behalf of whoever this service is
+serving**, through
+[token exchange](https://projectapricot.dev/docs/authentication/token-exchange). The callee then applies
+that person's authority, so a gateway or an agent surface can reach no more than the person behind it
+could.
+
+```csharp
+services.AddGrpcClient<Content.ContentClient>(…)
+    .AddGrpcExchangedCallCredentials(credentials =>
+    {
+        credentials.Resource = "urn:svc:content";
+        credentials.Scopes = ["content.agent"];
+    });
+```
+
+The choice is per client because it is a property of the callee, and one host commonly does both. It
+needs `AddTokenExchangeAuthentication` in the host; a client configured for the exchange without it
+fails loudly on the first call rather than quietly going out as the service.
+
+A call with nobody to act for fails too, as `internal` below. That is the point: the alternative is a
+background job reaching what only a signed-in person should.
+
+`AddGrpcCallCredentials<TAuthenticator>` is the open form, for a grant this package does not name.
 
 ## The header
 
@@ -57,7 +87,7 @@ telling the caller to authenticate again is both useless and a lie about whose f
 | Why no token | Reported as |
 | --- | --- |
 | The provider could not be reached, or faulted | `unavailable` — waiting may help |
-| Anything else: bad client id, bad secret, bad authority, refused scope | `internal` — a person has to change something |
+| Anything else: bad client id, bad secret, bad authority, refused scope, nobody to act for | `internal` — a person has to change something |
 
 The provider's own message is not repeated. It names the provider and can quote what it refused, and
 neither belongs in a failure a caller reads.
