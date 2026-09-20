@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
+using ApricotFramework.Authentication.ClientCredentials;
+using ApricotFramework.Authentication.TokenExchange;
 using ApricotFramework.Authentication;
 using Grpc.Core;
 
@@ -9,29 +11,34 @@ namespace ApricotFramework.Grpc.Client.Authentication.Tests;
 /// An authenticator that always answers the same way.
 /// </summary>
 /// <param name="failure">How it fails, or null to hand out a token.</param>
-internal sealed class StubAuthenticator(ClientAuthenticationException? failure = null) : IClientAuthenticator
+/// <remarks>
+/// Registered under both marker interfaces in the tests, so which one a client resolves is the only
+/// thing under test rather than how each is implemented.
+/// </remarks>
+internal sealed class StubAuthenticator(TokenRequestException? failure = null)
+    : IClientCredentialsAuthenticator, ITokenExchangeAuthenticator
 {
     /// <summary>
     /// Gets what the last call asked for.
     /// </summary>
-    internal ClientAuthenticationParameters? Requested { get; private set; }
+    internal TokenRequestParameters? Requested { get; private set; }
 
     /// <inheritdoc />
-    public Task<AuthenticatedClientContext> AuthenticateAsync(
-        ClientAuthenticationParameters? parameters = null,
+    public Task<AccessToken> AuthenticateAsync(
+        TokenRequestParameters? parameters = null,
         CancellationToken cancellationToken = default)
     {
         this.Requested = parameters;
 
         return failure is null
-            ? Task.FromResult(new AuthenticatedClientContext { Token = "a-token", TokenType = "Bearer" })
-            : Task.FromException<AuthenticatedClientContext>(failure);
+            ? Task.FromResult(new AccessToken { Value = "a-token", TokenType = "Bearer" })
+            : Task.FromException<AccessToken>(failure);
     }
 
     /// <inheritdoc />
     public async Task<T> DoAuthenticatedAsync<T>(
-        Func<AuthenticatedClientContext, CancellationToken, Task<T>> securedOperation,
-        ClientAuthenticationParameters? parameters = null,
+        Func<AccessToken, CancellationToken, Task<T>> securedOperation,
+        TokenRequestParameters? parameters = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(securedOperation);
