@@ -96,6 +96,7 @@ per callee:
 
 ```csharp
 var orders = clients.Create<Orders.OrdersClient>();
+var eu = clients.Create<Inventory.InventoryClient>("warehouse-eu");   // registered under a name of its own
 ```
 
 It is a convenience over `GrpcClientFactory.CreateClient<T>()`, not something you need.

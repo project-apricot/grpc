@@ -46,6 +46,58 @@ public class AddDiscoveredGrpcClientTests
     }
 
     [Fact]
+    public void AddDiscoveredGrpcClient_OneTypeUnderTwoNames_ReachesTwoServices()
+    {
+        // one contract every service implements: the type is shared, the name is what differs
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IDiscoveryClient>(new MapDiscoveryClient(new Dictionary<string, string>
+        {
+            ["orders"] = "http://localhost:5001",
+            ["billing"] = "http://localhost:5002"
+        }));
+        services.AddGrpcClientsCore(_ => { });
+        services.AddDiscoveredGrpcClient<StubClient>("orders", "orders");
+        services.AddDiscoveredGrpcClient<StubClient>("billing", "billing");
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+
+        var options = provider.GetRequiredService<IOptionsMonitor<GrpcClientFactoryOptions>>();
+
+        Assert.Equal(new Uri("http://localhost:5001"), options.Get("orders").Address);
+        Assert.Equal(new Uri("http://localhost:5002"), options.Get("billing").Address);
+    }
+
+    [Fact]
+    public void AddDiscoveredGrpcClient_Named_StillAllowsInsecureTransportWhenConfigured()
+    {
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IDiscoveryClient>(new StubDiscoveryClient("http://localhost:5001"));
+        services.AddGrpcClientsCore(settings => settings.AllowInsecure = true);
+        services.AddDiscoveredGrpcClient<StubClient>("orders", "orders-primary");
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+
+        var channel = new GrpcChannelOptions();
+
+        foreach (var configureChannel in provider.GetRequiredService<IOptionsMonitor<GrpcClientFactoryOptions>>().Get("orders-primary").ChannelOptionsActions)
+        {
+            configureChannel(channel);
+        }
+
+        Assert.True(channel.UnsafeUseInsecureChannelCallCredentials);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void AddDiscoveredGrpcClient_BlankName_Throws(string name)
+    {
+        Assert.Throws<ArgumentException>(() => new ServiceCollection().AddDiscoveredGrpcClient<StubClient>("orders", name));
+    }
+
+    [Fact]
     public void AddDiscoveredGrpcClient_InsecureNotAllowed_KeepsCredentialsOffAPlaintextChannel()
     {
         Assert.False(Channel("http://localhost:5001").UnsafeUseInsecureChannelCallCredentials);

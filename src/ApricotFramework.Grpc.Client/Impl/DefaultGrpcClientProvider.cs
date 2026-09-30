@@ -11,6 +11,14 @@ internal sealed class DefaultGrpcClientProvider(GrpcClientFactory factory) : IGr
     /// <inheritdoc />
     public TClient Create<TClient>() where TClient : class
     {
-        return factory.CreateClient<TClient>(typeof(TClient).Name);
+        return this.Create<TClient>(typeof(TClient).Name);
+    }
+
+    /// <inheritdoc />
+    public TClient Create<TClient>(string name) where TClient : class
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        return factory.CreateClient<TClient>(name);
     }
 }

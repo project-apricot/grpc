@@ -16,4 +16,16 @@ public interface IGrpcClientProvider
     /// <returns>The client.</returns>
     /// <exception cref="InvalidOperationException">Thrown when no such client was registered.</exception>
     TClient Create<TClient>() where TClient : class;
+
+    /// <summary>
+    /// Gets a client registered under a name of its own.
+    /// </summary>
+    /// <typeparam name="TClient">The generated client to get.</typeparam>
+    /// <param name="name">The name it was registered under.</param>
+    /// <returns>The client.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no client was registered under that name.</exception>
+    /// <remarks>
+    /// For one client type reaching several services, each registered under its own name.
+    /// </remarks>
+    TClient Create<TClient>(string name) where TClient : class;
 }
