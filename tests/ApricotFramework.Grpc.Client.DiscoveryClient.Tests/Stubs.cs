@@ -26,6 +26,28 @@ internal sealed class StubDiscoveryClient(string? grpcUrl) : IDiscoveryClient
 }
 
 /// <summary>
+/// A catalogue that knows several services.
+/// </summary>
+/// <param name="grpcUrls">What it answers for each service's gRPC endpoint.</param>
+internal sealed class MapDiscoveryClient(IReadOnlyDictionary<string, string> grpcUrls) : IDiscoveryClient
+{
+    /// <inheritdoc />
+    public ValueTask<string?> GetApiBase(string service) => ValueTask.FromResult<string?>(null);
+
+    /// <inheritdoc />
+    public ValueTask<string?> GetApiUrl(string service, string api) => ValueTask.FromResult<string?>(null);
+
+    /// <inheritdoc />
+    public ValueTask<string?> GetGrpcUrl(string service) => ValueTask.FromResult(grpcUrls.GetValueOrDefault(service));
+
+    /// <inheritdoc />
+    public ValueTask<string?> GetBaseUrl(string service, string role) => ValueTask.FromResult<string?>(null);
+
+    /// <inheritdoc />
+    public ValueTask<string?> GetUrl(string service, string role, string path) => ValueTask.FromResult<string?>(null);
+}
+
+/// <summary>
 /// A generated client stands in as this: the factory only needs the invoker constructor.
 /// </summary>
 /// <param name="invoker">The invoker the factory builds.</param>

@@ -25,11 +25,35 @@ public static class GrpcDiscoveryServiceCollectionExtensions
     public static IHttpClientBuilder AddDiscoveredGrpcClient<TClient>(this IServiceCollection services, string service)
         where TClient : class
     {
+        return services.AddDiscoveredGrpcClient<TClient>(service, typeof(TClient).Name);
+    }
+
+    /// <summary>
+    /// Adds a client addressed by service name under a name of its own, resolved when its channel is created.
+    /// </summary>
+    /// <typeparam name="TClient">The generated client to register.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <param name="service">The service to call, as the catalogue knows it.</param>
+    /// <param name="name">The name to register the client under.</param>
+    /// <returns>The client builder, for adding credentials or configuring the channel further.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <remarks>
+    /// For one client type reaching several services - a contract every service implements, say.
+    /// Without a name, every registration of the type shares the one named after it, so the second
+    /// service would quietly configure the first's channel. Reach a named client through
+    /// <see cref="IGrpcClientProvider.Create{TClient}(string)"/> or <c>GrpcClientFactory</c>; resolving
+    /// the client type directly gives the one registered under the type's own name.
+    /// </remarks>
+    public static IHttpClientBuilder AddDiscoveredGrpcClient<TClient>(this IServiceCollection services, string service, string name)
+        where TClient : class
+    {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(service);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         return services
-            .AddGrpcClient<TClient>((provider, client) => client.Address = Resolve(provider, service))
+            .AddGrpcClient<TClient>(name, (provider, client) => client.Address = Resolve(provider, service))
             .AllowInsecureTransportIfConfigured();
     }
 

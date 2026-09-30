@@ -21,6 +21,21 @@ services
     .AddGrpcCallCredentials(credentials => credentials.Scopes = ["orders.read"]);
 ```
 
+## One type, several services
+
+A client is registered under its type's name, so registering the same type twice configures one
+channel twice. Where one generated client reaches several services — a contract more than one
+service implements — give each registration a name of its own:
+
+```csharp
+services.AddDiscoveredGrpcClient<Inventory.InventoryClient>("warehouse-eu", name: "warehouse-eu");
+services.AddDiscoveredGrpcClient<Inventory.InventoryClient>("warehouse-us", name: "warehouse-us");
+```
+
+Reach them with `clients.Create<Inventory.InventoryClient>("warehouse-eu")`, or through
+`GrpcClientFactory`. Resolving the type directly gives only the registration under the type's own
+name.
+
 ## When the catalogue is asked
 
 Once, when the channel is created. The address is fixed from then on — which is what a gRPC channel
