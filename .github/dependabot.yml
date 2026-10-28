@@ -10,20 +10,22 @@ updates:
       - dependencies
     commit-message:
       prefix: "chore(deps)"
-    # The test stack is left alone entirely: it never reaches a consumer, so an update to it is
-    # noise on a weekly cadence rather than something to act on. It is upgraded deliberately, when
-    # somebody is already in here.
     ignore:
       - dependency-name: "xunit*"
       - dependency-name: "Microsoft.NET.Test.Sdk"
       - dependency-name: "coverlet.*"
       - dependency-name: "Microsoft.Testing.*"
-    # Grouped so the generated code and the runtime it targets move together.
     groups:
       grpc-stack:
         patterns:
           - "Grpc.*"
           - "Google.Protobuf"
+      microsoft-extensions:
+        patterns:
+          - "Microsoft.Extensions.*"
+      apricot:
+        patterns:
+          - "ApricotFramework.*"
 
   - package-ecosystem: github-actions
     directory: "/"
